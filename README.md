@@ -4,7 +4,7 @@ install | update
 
 ```
 "require": {
-    "base.module.migration.userfields": "dev-main"
+    "liventin/base.module.migration.userfields": "dev-main"
 }
 "repositories": [
     {
