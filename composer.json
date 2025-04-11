@@ -12,7 +12,7 @@
   "repositories": [
     {
       "type": "vcs",
-      "url": "git@github.com:liventin/base.module"
+      "url": "git@github.com:liventin/base.module.migration.userfields"
     }
   ]
 }
