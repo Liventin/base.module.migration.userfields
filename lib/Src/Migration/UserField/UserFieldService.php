@@ -15,7 +15,7 @@ use Psr\Container\NotFoundExceptionInterface;
 use ReflectionException;
 
 #[LazyService(serviceCode: IUserFieldService::SERVICE_CODE, constructorParams: ['moduleId' => LazyService::MODULE_ID])]
-class UserFieldService implements IUserFieldService
+class UserFieldService
 {
     private string $moduleId;
     private array $fields = [];
