@@ -99,7 +99,7 @@ abstract class UserFieldProvider
         );
     }
 
-    protected function afterAdd(int $fieldId, array $field, string $moduleId): void
+    public function afterAdd(int $fieldId, array $field, string $moduleId): void
     {
     }
 
