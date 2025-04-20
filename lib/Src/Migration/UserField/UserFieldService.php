@@ -127,7 +127,7 @@ class UserFieldService
     {
         $this->registerProviders();
 
-        if (!isset($this->providerClasses[$type])) {
+        if (!isset($this->providers[$type])) {
             throw new ObjectNotFoundException("Provider for type $type not found");
         }
 
