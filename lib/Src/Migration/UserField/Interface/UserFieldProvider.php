@@ -99,10 +99,6 @@ abstract class UserFieldProvider
         );
     }
 
-    public function afterAdd(int $fieldId, array $field, string $moduleId): void
-    {
-    }
-
     public function getParamsToArray(): array
     {
         return [
@@ -117,4 +113,10 @@ abstract class UserFieldProvider
             'LABELS' => $this->labels,
         ];
     }
+
+    public function afterAdd(int $fieldId, array $field, string $moduleId): void
+    {
+    }
+
+    abstract public static function getType(): string;
 }

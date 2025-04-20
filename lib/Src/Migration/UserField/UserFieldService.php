@@ -91,9 +91,6 @@ class UserFieldService
             }
 
             $provider = $this->getProvider($field['userTypeId']);
-            if (!$provider) {
-                continue;
-            }
 
             $params = $field['class']::getParams();
             $fieldData = array_merge($provider->getFieldData($field, $this->moduleId), $params);
@@ -120,16 +117,21 @@ class UserFieldService
 
     /**
      * @param string $type
-     * @return IUserFieldProvider|null
+     * @return IUserFieldProvider
      * @throws NotFoundExceptionInterface
      * @throws ObjectNotFoundException
      * @throws ReflectionException
      * @throws SystemException
      */
-    public function getProvider(string $type): ?IUserFieldProvider
+    public function getProvider(string $type): IUserFieldProvider
     {
         $this->registerProviders();
-        return $this->providers[$type] ?? null;
+
+        if (!isset($this->providerClasses[$type])) {
+            throw new ObjectNotFoundException("Provider for type $type not found");
+        }
+
+        return new $this->providers[$type];
     }
 
     /**
@@ -156,8 +158,7 @@ class UserFieldService
         $providerClasses = $classList->setSubClassesFilter([IUserFieldProvider::class])->getFromLib($relativePath);
 
         foreach ($providerClasses as $className) {
-            $provider = new $className();
-            $this->providers[$provider->getType()] = $provider;
+            $this->providers[$className::getType()] = $className;
         }
     }
 }
