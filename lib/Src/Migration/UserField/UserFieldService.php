@@ -93,7 +93,7 @@ class UserFieldService
             $provider = $this->getProvider($field['userTypeId']);
 
             $params = $field['class']::getParams();
-            $fieldData = array_merge($provider->getFieldData($field, $this->moduleId), $params);
+            $fieldData = array_merge($provider->getFieldData($field), $params);
             $fieldId = $userTypeEntity->Add($fieldData);
 
             if ($fieldId) {
