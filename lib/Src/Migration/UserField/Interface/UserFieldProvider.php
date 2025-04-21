@@ -72,36 +72,25 @@ abstract class UserFieldProvider
         return $this;
     }
 
-    public function getFieldData(array $field, string $moduleId): array
+    public function getFieldData(array $field): array
     {
         $fieldName = $field['fieldName'];
-        $label = "Field {$fieldName}";
+        $label = "Field $fieldName";
 
-        return array_merge(
-            [
-                'ENTITY_ID' => $field['entityId'],
-                'FIELD_NAME' => $fieldName,
-                'USER_TYPE_ID' => $field['userTypeId'],
-                'XML_ID' => $fieldName,
-                'SORT' => $this->sort,
-                'MULTIPLE' => $this->multiple,
-                'MANDATORY' => $this->mandatory,
-                'SHOW_FILTER' => $this->showFilter,
-                'SHOW_IN_LIST' => $this->showInList,
-                'EDIT_IN_LIST' => $this->editInList,
-                'IS_SEARCHABLE' => $this->isSearchable,
-                'SETTINGS' => $this->settings,
-                'EDIT_FORM_LABEL' => ['ru' => $label],
-                'LIST_COLUMN_LABEL' => ['ru' => $label],
-                'LIST_FILTER_LABEL' => ['ru' => $label],
-            ],
-            $this->labels
-        );
+        return [
+            'ENTITY_ID' => $field['entityId'],
+            'FIELD_NAME' => $fieldName,
+            'USER_TYPE_ID' => $field['userTypeId'],
+            'XML_ID' => $fieldName,
+            'EDIT_FORM_LABEL' => ['ru' => $label],
+            'LIST_COLUMN_LABEL' => ['ru' => $label],
+            'LIST_FILTER_LABEL' => ['ru' => $label],
+        ];
     }
 
     public function getParamsToArray(): array
     {
-        return [
+        $result = [
             'SORT' => $this->sort,
             'MULTIPLE' => $this->multiple,
             'MANDATORY' => $this->mandatory,
@@ -110,8 +99,13 @@ abstract class UserFieldProvider
             'EDIT_IN_LIST' => $this->editInList,
             'IS_SEARCHABLE' => $this->isSearchable,
             'SETTINGS' => $this->settings,
-            'LABELS' => $this->labels,
         ];
+
+        foreach ($this->labels as $key => $value) {
+            $result[$key] = $value;
+        }
+
+        return $result;
     }
 
     public function afterAdd(int $fieldId, array $field, string $moduleId): void
