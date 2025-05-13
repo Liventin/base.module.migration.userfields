@@ -1,6 +1,6 @@
 <?php
 
-namespace Base\Module\Src\Migration\UserField\Interface;
+namespace Base\Module\Src\Migration\UserField\Providers;
 
 class UserFieldProvider
 {

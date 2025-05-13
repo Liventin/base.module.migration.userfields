@@ -2,7 +2,6 @@
 
 namespace Base\Module\Src\Migration\UserField;
 
-use Base\Module\Src\Migration\UserField\Interface\UserFieldProvider;
 use Bitrix\Main\Loader;
 use Bitrix\Main\ObjectNotFoundException;
 use Bitrix\Main\SystemException;
@@ -11,7 +10,7 @@ use Base\Module\Service\Container;
 use Base\Module\Service\LazyService;
 use Base\Module\Service\Migration\UserField\UserFieldService as IUserFieldService;
 use Base\Module\Service\Tool\ClassList;
-use Base\Module\Src\Migration\UserField\Interface\UserFieldProvider as IUserFieldProvider;
+use Base\Module\Src\Migration\UserField\Providers\UserFieldProvider as BaseUserFieldProvider;
 use Psr\Container\NotFoundExceptionInterface;
 use ReflectionException;
 
@@ -118,18 +117,18 @@ class UserFieldService
 
     /**
      * @param string $type
-     * @return IUserFieldProvider
+     * @return BaseUserFieldProvider
      * @throws NotFoundExceptionInterface
      * @throws ObjectNotFoundException
      * @throws ReflectionException
      * @throws SystemException
      */
-    public function getProvider(string $type): IUserFieldProvider
+    public function getProvider(string $type): BaseUserFieldProvider
     {
         $this->registerProviders();
 
         if (!isset($this->providers[$type])) {
-            return new $this->providers[UserFieldProvider::getType()];
+            return new $this->providers[BaseUserFieldProvider::getType()];
         }
 
         return new $this->providers[$type];
@@ -137,10 +136,10 @@ class UserFieldService
 
     /**
      * @return void
-     * @throws SystemException
-     * @throws ObjectNotFoundException
      * @throws NotFoundExceptionInterface
+     * @throws ObjectNotFoundException
      * @throws ReflectionException
+     * @throws SystemException
      */
     private function registerProviders(): void
     {
@@ -156,7 +155,7 @@ class UserFieldService
         $relativePath = str_replace($moduleRoot, '', __DIR__ . '/Providers');
 
         $classList = Container::get(ClassList::SERVICE_CODE);
-        $providerClasses = $classList->setSubClassesFilter([IUserFieldProvider::class])->getFromLib($relativePath);
+        $providerClasses = $classList->setSubClassesFilter([BaseUserFieldProvider::class])->getFromLib($relativePath);
 
         foreach ($providerClasses as $className) {
             $this->providers[$className::getType()] = $className;
