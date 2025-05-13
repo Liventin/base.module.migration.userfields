@@ -2,6 +2,7 @@
 
 namespace Base\Module\Src\Migration\UserField;
 
+use Base\Module\Src\Migration\UserField\Interface\UserFieldProvider;
 use Bitrix\Main\Loader;
 use Bitrix\Main\ObjectNotFoundException;
 use Bitrix\Main\SystemException;
@@ -128,7 +129,7 @@ class UserFieldService
         $this->registerProviders();
 
         if (!isset($this->providers[$type])) {
-            throw new ObjectNotFoundException("Provider for type $type not found");
+            return new $this->providers[UserFieldProvider::getType()];
         }
 
         return new $this->providers[$type];

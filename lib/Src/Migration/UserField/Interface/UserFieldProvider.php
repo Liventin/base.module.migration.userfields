@@ -2,7 +2,7 @@
 
 namespace Base\Module\Src\Migration\UserField\Interface;
 
-abstract class UserFieldProvider
+class UserFieldProvider
 {
     protected string $sort = '100';
     protected string $multiple = 'N';
@@ -112,5 +112,8 @@ abstract class UserFieldProvider
     {
     }
 
-    abstract public static function getType(): string;
+    public static function getType(): string
+    {
+        return 'base_user_type';
+    }
 }
