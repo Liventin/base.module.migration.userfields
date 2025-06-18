@@ -4,15 +4,9 @@
   "description": "Service for migration bitrix userfield",
   "require": {
     "php": ">=8.1",
-    "liventin/base.module": "dev-main"
+    "liventin/base.module": "^1.0.0"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest"
-  },
-  "repositories": [
-    {
-      "type": "vcs",
-      "url": "git@github.com:liventin/base.module.migration.userfields"
-    }
-  ]
+  }
 }
