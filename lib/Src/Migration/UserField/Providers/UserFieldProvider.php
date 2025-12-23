@@ -34,7 +34,7 @@ class UserFieldProvider
 
     public function setShowFilter(bool $showFilter): self
     {
-        $this->showFilter = $showFilter ? 'Y' : 'N';
+        $this->showFilter = $showFilter ? 'E' : 'N';
         return $this;
     }
 
