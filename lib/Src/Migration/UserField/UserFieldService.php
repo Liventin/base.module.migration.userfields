@@ -2,17 +2,16 @@
 
 namespace Base\Module\Src\Migration\UserField;
 
+use Base\Module\Exception\ModuleException;
+use Base\Module\Service\Migration\UserField\UserFieldEntity;
 use Bitrix\Main\Loader;
-use Bitrix\Main\ObjectNotFoundException;
-use Bitrix\Main\SystemException;
 use CUserTypeEntity;
 use Base\Module\Service\Container;
 use Base\Module\Service\LazyService;
 use Base\Module\Service\Migration\UserField\UserFieldService as IUserFieldService;
 use Base\Module\Service\Tool\ClassList;
 use Base\Module\Src\Migration\UserField\Providers\UserFieldProvider as BaseUserFieldProvider;
-use Psr\Container\NotFoundExceptionInterface;
-use ReflectionException;
+
 
 #[LazyService(serviceCode: IUserFieldService::SERVICE_CODE, constructorParams: ['moduleId' => LazyService::MODULE_ID])]
 class UserFieldService
@@ -26,18 +25,32 @@ class UserFieldService
         $this->moduleId = $moduleId;
     }
 
+    /**
+     * @param UserFieldEntity[] $fields
+     * @return $this
+     */
     public function setFields(array $fields): self
     {
-        $this->fields = $fields;
+        $this->fields = [];
+
+        $othersUfs = [];
+        $hlblockUfs = [];
+
+        foreach ($fields as $field) {
+            if ($field::getUserTypeId() === 'hlblock') {
+                $hlblockUfs[] = $field;
+            } else {
+                $othersUfs[] = $field;
+            }
+        }
+
+        $this->fields = array_merge($othersUfs, $hlblockUfs);
         return $this;
     }
 
     /**
      * @return void
-     * @throws NotFoundExceptionInterface
-     * @throws ObjectNotFoundException
-     * @throws ReflectionException
-     * @throws SystemException
+     * @throws ModuleException
      */
     public function install(): void
     {
@@ -105,10 +118,7 @@ class UserFieldService
 
     /**
      * @return void
-     * @throws NotFoundExceptionInterface
-     * @throws ObjectNotFoundException
-     * @throws ReflectionException
-     * @throws SystemException
+     * @throws ModuleException
      */
     public function reInstall(): void
     {
@@ -118,10 +128,7 @@ class UserFieldService
     /**
      * @param string $type
      * @return BaseUserFieldProvider
-     * @throws NotFoundExceptionInterface
-     * @throws ObjectNotFoundException
-     * @throws ReflectionException
-     * @throws SystemException
+     * @throws ModuleException
      */
     public function getProvider(string $type): BaseUserFieldProvider
     {
@@ -136,10 +143,7 @@ class UserFieldService
 
     /**
      * @return void
-     * @throws NotFoundExceptionInterface
-     * @throws ObjectNotFoundException
-     * @throws ReflectionException
-     * @throws SystemException
+     * @throws ModuleException
      */
     private function registerProviders(): void
     {
