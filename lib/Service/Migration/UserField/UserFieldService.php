@@ -4,7 +4,7 @@ namespace Base\Module\Service\Migration\UserField;
 
 interface UserFieldService
 {
-    public const SERVICE_CODE = 'base.module.migration.userfield.service';
+    public const SERVICE_CODE = 'base.module.migration.userfields.service';
 
     public function setFields(array $fields): self;
 

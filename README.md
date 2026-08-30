@@ -42,4 +42,14 @@ redirect (optional)
 <a href="https://github.com/Liventin/base.module.migration.userfields.provider.enumeration">Enumeration</a>
 </td>
 </tr>
+<tr>
+<td>
+<a href="https://github.com/Liventin/base.module.migration.userfields.provider.hlblock">Hl Block</a>
+</td>
+</tr>
+<tr>
+<td>
+<a href="https://github.com/Liventin/base.module.migration.userfields.provider.iblock.element">Iblock Element</a>
+</td>
+</tr>
 </table>
