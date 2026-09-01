@@ -5,22 +5,16 @@ namespace Base\Module\Install;
 use Base\Module\Install\Interface\Install;
 use Base\Module\Install\Interface\ReInstall;
 use Base\Module\Service\Container;
+use Base\Module\Exception\ModuleException;
 use Base\Module\Service\Migration\UserField\UserFieldEntity;
 use Base\Module\Service\Migration\UserField\UserFieldService as IUserFieldService;
 use Base\Module\Service\Tool\ClassList;
-use Bitrix\Main\ObjectNotFoundException;
-use Bitrix\Main\SystemException;
-use Psr\Container\NotFoundExceptionInterface;
-use ReflectionException;
 
 class UserFieldInstaller implements Install, ReInstall
 {
     /**
      * @return array
-     * @throws NotFoundExceptionInterface
-     * @throws ObjectNotFoundException
-     * @throws ReflectionException
-     * @throws SystemException
+     * @throws ModuleException
      */
     private function getFields(): array
     {
@@ -30,10 +24,7 @@ class UserFieldInstaller implements Install, ReInstall
     }
 
     /**
-     * @throws NotFoundExceptionInterface
-     * @throws ObjectNotFoundException
-     * @throws ReflectionException
-     * @throws SystemException
+     * @throws ModuleException
      */
     public function install(): void
     {
@@ -43,10 +34,7 @@ class UserFieldInstaller implements Install, ReInstall
     }
 
     /**
-     * @throws NotFoundExceptionInterface
-     * @throws ObjectNotFoundException
-     * @throws ReflectionException
-     * @throws SystemException
+     * @throws ModuleException
      */
     public function reInstall(): void
     {
