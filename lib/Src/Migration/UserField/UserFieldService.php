@@ -126,6 +126,80 @@ class UserFieldService
     }
 
     /**
+     * @return array<int, array{
+     *     class: class-string,
+     *     entityId: string,
+     *     fieldName: string,
+     *     userTypeId: string,
+     *     exists: bool,
+     *     label: string,
+     * }>
+     * @throws ModuleException
+     */
+    public function getFieldsStatus(): array
+    {
+        $fieldClasses = $this->getFieldClasses();
+
+        if (empty($fieldClasses)) {
+            return [];
+        }
+
+        $entities = [];
+        foreach ($fieldClasses as $class) {
+            $entityId = $class::getEntityId();
+            $entities[$entityId] = $entityId;
+        }
+
+        $existing = [];
+        $rsFields = CUserTypeEntity::GetList([], ['LANG' => LANGUAGE_ID]);
+        while ($field = $rsFields->Fetch()) {
+            if (!isset($entities[$field['ENTITY_ID']])) {
+                continue;
+            }
+            $key = $field['ENTITY_ID'] . '::' . $field['FIELD_NAME'];
+            $existing[$key] = $field;
+        }
+
+        $status = [];
+        foreach ($fieldClasses as $class) {
+            $entityId = $class::getEntityId();
+            $fieldName = $class::getFieldName();
+            $key = $entityId . '::' . $fieldName;
+            $field = $existing[$key] ?? null;
+
+            $label = (string)($field['EDIT_FORM_LABEL'] ?? '');
+            if ($label === '') {
+                $label = (string)($field['LIST_COLUMN_LABEL'] ?? '');
+            }
+            if ($label === '') {
+                $label = $fieldName;
+            }
+
+            $status[] = [
+                'class' => $class,
+                'entityId' => $entityId,
+                'fieldName' => $fieldName,
+                'userTypeId' => $class::getUserTypeId(),
+                'exists' => $field !== null,
+                'label' => $label,
+            ];
+        }
+
+        return $status;
+    }
+
+    /**
+     * @return array<int, class-string>
+     * @throws ModuleException
+     */
+    private function getFieldClasses(): array
+    {
+        /** @var ClassList $classList */
+        $classList = Container::get(ClassList::SERVICE_CODE);
+        return $classList->setSubClassesFilter([UserFieldEntity::class])->getFromLib('Migration');
+    }
+
+    /**
      * @param string $type
      * @return BaseUserFieldProvider
      * @throws ModuleException

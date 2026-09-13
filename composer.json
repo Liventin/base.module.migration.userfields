@@ -4,7 +4,8 @@
   "description": "Service for migration bitrix userfield",
   "require": {
     "php": ">=8.1",
-    "liventin/base.module": "^1.0.0"
+    "liventin/base.module": "^1.0.0",
+    "liventin/base.module.options.provider.table": "^1.0.0"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest"
