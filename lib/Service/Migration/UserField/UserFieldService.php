@@ -13,4 +13,16 @@ interface UserFieldService
     public function reInstall(): void;
 
     public function getProvider(string $type): mixed;
+
+    /**
+     * @return array<int, array{
+     *     class: class-string,
+     *     entityId: string,
+     *     fieldName: string,
+     *     userTypeId: string,
+     *     exists: bool,
+     *     label: string,
+     * }>
+     */
+    public function getFieldsStatus(): array;
 }
