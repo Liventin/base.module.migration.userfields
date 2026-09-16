@@ -35,7 +35,7 @@ class UserFieldsRegistry implements Option
 
     public static function getSort(): int
     {
-        return 100;
+        return 200;
     }
 
     /**
