@@ -5,9 +5,11 @@ namespace Base\Module\Options\TabMigration;
 use Base\Module\Exception\ModuleException;
 use Base\Module\Options\TabMigration;
 use Base\Module\Service\Container;
+use Base\Module\Service\Migration\UserField\UserFieldEntity;
 use Base\Module\Service\Migration\UserField\UserFieldService as IUserFieldService;
 use Base\Module\Service\Options\Option;
 use Base\Module\Service\Options\OptionsService;
+use Base\Module\Service\Tool\ClassList;
 use Base\Module\Src\Options\Providers\TableProvider;
 use Bitrix\Main\Localization\Loc;
 
@@ -56,8 +58,16 @@ class UserFieldsRegistry implements Option
         /** @var IUserFieldService $userFieldService */
         $userFieldService = Container::get(IUserFieldService::SERVICE_CODE);
 
+        /** @var ClassList $classList */
+        $classList = Container::get(ClassList::SERVICE_CODE);
+        $fields = $classList
+            ->setSubClassesFilter([UserFieldEntity::class])
+            ->getFromLib('Migration');
+
         $rows = [];
-        foreach ($userFieldService->getFieldsStatus() as $field) {
+        foreach ($userFieldService
+            ->setFields($fields)
+            ->getFieldsStatus() as $field) {
             $rows[] = [
                 'cells' => [
                     [

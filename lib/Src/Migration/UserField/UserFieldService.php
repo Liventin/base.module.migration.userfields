@@ -138,7 +138,7 @@ class UserFieldService
      */
     public function getFieldsStatus(): array
     {
-        $fieldClasses = $this->getFieldClasses();
+        $fieldClasses = $this->fields;
 
         if (empty($fieldClasses)) {
             return [];
@@ -186,17 +186,6 @@ class UserFieldService
         }
 
         return $status;
-    }
-
-    /**
-     * @return array<int, class-string>
-     * @throws ModuleException
-     */
-    private function getFieldClasses(): array
-    {
-        /** @var ClassList $classList */
-        $classList = Container::get(ClassList::SERVICE_CODE);
-        return $classList->setSubClassesFilter([UserFieldEntity::class])->getFromLib('Migration');
     }
 
     /**
