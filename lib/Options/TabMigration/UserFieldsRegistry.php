@@ -87,6 +87,11 @@ class UserFieldsRegistry implements Option
             ];
         }
 
+        usort($rows, static function (array $a, array $b): int {
+            $entity = $a['cells'][1] <=> $b['cells'][1];
+            return $entity !== 0 ? $entity : ($a['cells'][2] <=> $b['cells'][2]);
+        });
+
         return $provider
             ->setColumns([
                 Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_COL_STATUS'),
