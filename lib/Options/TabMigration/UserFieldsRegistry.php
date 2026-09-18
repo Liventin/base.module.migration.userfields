@@ -84,8 +84,20 @@ class UserFieldsRegistry implements Option
                     $field['userTypeId'],
                 ],
                 'highlight' => !$field['exists'],
+                'children' => [
+                    [
+                        'cells' => [
+                            $field['class'],
+                        ],
+                    ],
+                ],
             ];
         }
+
+        usort($rows, static function (array $a, array $b): int {
+            $entity = $a['cells'][1] <=> $b['cells'][1];
+            return $entity !== 0 ? $entity : ($a['cells'][2] <=> $b['cells'][2]);
+        });
 
         return $provider
             ->setColumns([
@@ -94,6 +106,9 @@ class UserFieldsRegistry implements Option
                 Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_COL_FIELD'),
                 Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_COL_LABEL'),
                 Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_COL_TYPE'),
+            ])
+            ->setChildColumns([
+                Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_COL_CLASS'),
             ])
             ->setRows($rows)
             ->setEmpty(Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_EMPTY'))
