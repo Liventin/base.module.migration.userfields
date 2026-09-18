@@ -84,6 +84,13 @@ class UserFieldsRegistry implements Option
                     $field['userTypeId'],
                 ],
                 'highlight' => !$field['exists'],
+                'children' => [
+                    [
+                        'cells' => [
+                            $field['class'],
+                        ],
+                    ],
+                ],
             ];
         }
 
@@ -99,6 +106,9 @@ class UserFieldsRegistry implements Option
                 Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_COL_FIELD'),
                 Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_COL_LABEL'),
                 Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_COL_TYPE'),
+            ])
+            ->setChildColumns([
+                Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_COL_CLASS'),
             ])
             ->setRows($rows)
             ->setEmpty(Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_EMPTY'))
