@@ -2,15 +2,24 @@
 
 namespace Base\Module\Controller;
 
+use Base\Module\Controller\Filter\AdminFilter;
 use Base\Module\Exception\ModuleException;
 use Base\Module\Service\Container;
 use Base\Module\Service\Migration\UserField\UserFieldEntity;
 use Base\Module\Service\Migration\UserField\UserFieldService as IUserFieldService;
 use Base\Module\Service\Tool\ClassList;
+use Bitrix\Main\Engine\ActionFilter\Authentication;
 use Bitrix\Main\Engine\Controller;
 
 class UserFieldExport extends Controller
 {
+    protected function getDefaultPreFilters(): array
+    {
+        return [
+            new Authentication(),
+            new AdminFilter(),
+        ];
+    }
     /**
      * @return array<string, mixed>
      * @throws ModuleException
