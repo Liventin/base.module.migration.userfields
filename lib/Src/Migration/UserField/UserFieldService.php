@@ -9,6 +9,7 @@ use CUserTypeEntity;
 use Base\Module\Service\Container;
 use Base\Module\Service\LazyService;
 use Base\Module\Service\Migration\UserField\UserFieldService as IUserFieldService;
+use Base\Module\Src\Migration\UserField\Providers\UserFieldExportable;
 use Base\Module\Service\Tool\ClassList;
 use Base\Module\Src\Migration\UserField\Providers\UserFieldProvider as BaseUserFieldProvider;
 
@@ -202,6 +203,163 @@ class UserFieldService
         }
 
         return new $this->providers[$type];
+    }
+
+    /**
+     * @return array<int, array{
+     *     entityId: string,
+     *     fieldName: string,
+     *     userTypeId: string,
+     *     label: string,
+     * }>
+     * @throws ModuleException
+     */
+    public function getAvailableFields(): array
+    {
+        $existing = [];
+        foreach ($this->fields as $class) {
+            $key = $class::getEntityId() . '::' . $class::getFieldName();
+            $existing[$key] = true;
+        }
+
+        $result = [];
+        $rsFields = CUserTypeEntity::GetList([], ['LANG' => LANGUAGE_ID]);
+        while ($field = $rsFields->Fetch()) {
+            $key = $field['ENTITY_ID'] . '::' . $field['FIELD_NAME'];
+            if (isset($existing[$key])) {
+                continue;
+            }
+
+            $label = (string)($field['EDIT_FORM_LABEL'] ?? '');
+            if ($label === '') {
+                $label = (string)($field['LIST_COLUMN_LABEL'] ?? '');
+            }
+            if ($label === '') {
+                $label = $field['FIELD_NAME'];
+            }
+
+            $result[] = [
+                'entityId' => $field['ENTITY_ID'],
+                'fieldName' => $field['FIELD_NAME'],
+                'userTypeId' => $field['USER_TYPE_ID'],
+                'label' => $label,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<int, array{
+     *     type: string,
+     *     label: string,
+     * }>
+     * @throws ModuleException
+     */
+    public function getExportableProviders(): array
+    {
+        $this->registerProviders();
+
+        $exportable = [];
+        foreach ($this->providers as $type => $className) {
+            $provider = new $className();
+            if ($provider instanceof UserFieldExportable) {
+                $exportable[] = [
+                    'type' => $type,
+                    'label' => $className::getType(),
+                ];
+            }
+        }
+
+        return $exportable;
+    }
+
+    /**
+     * @param string $entityId
+     * @param string $fieldName
+     * @param string $providerType
+     * @return array{
+     *     success: bool,
+     *     file?: string,
+     *     error?: string,
+     * }
+     * @throws ModuleException
+     */
+    public function exportField(string $entityId, string $fieldName, string $providerType): array
+    {
+        $field = $this->findField($entityId, $fieldName);
+        if (!$field) {
+            return ['success' => false, 'error' => 'Field not found'];
+        }
+
+        $provider = $this->getProvider($providerType);
+        if (!($provider instanceof UserFieldExportable)) {
+            return ['success' => false, 'error' => 'Provider is not exportable'];
+        }
+
+        $namespace = str_replace('.', '\\', ucwords($this->moduleId, '.'));
+        $fieldData = $this->buildFieldData($field);
+
+        $code = $provider->makeFile($fieldData, $namespace);
+
+        $moduleDir = Loader::getLocal('modules/' . $this->moduleId);
+        if ($moduleDir === false) {
+            return ['success' => false, 'error' => 'Module dir not found'];
+        }
+
+        $migrationDir = $moduleDir . '/lib/Migration';
+        if (!is_dir($migrationDir)) {
+            mkdir($migrationDir, 0755, true);
+        }
+
+        $filePath = $migrationDir . '/' . BaseUserFieldProvider::toClassName($fieldName) . '.php';
+        file_put_contents($filePath, $code);
+
+        return ['success' => true, 'file' => $filePath];
+    }
+
+    /**
+     * @param string $entityId
+     * @param string $fieldName
+     * @return array|null
+     */
+    private function findField(string $entityId, string $fieldName): ?array
+    {
+        $rs = CUserTypeEntity::GetList([], ['LANG' => LANGUAGE_ID]);
+        while ($field = $rs->Fetch()) {
+            if ($field['ENTITY_ID'] === $entityId && $field['FIELD_NAME'] === $fieldName) {
+                return $field;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array $field
+     * @return array
+     */
+    private function buildFieldData(array $field): array
+    {
+        $params = [];
+        foreach ([
+            'XML_ID', 'SORT', 'MULTIPLE', 'MANDATORY', 'SHOW_FILTER',
+            'SHOW_IN_LIST', 'EDIT_IN_LIST', 'IS_SEARCHABLE', 'SETTINGS',
+            'EDIT_FORM_LABEL', 'LIST_COLUMN_LABEL', 'LIST_FILTER_LABEL',
+            'ERROR_MESSAGE', 'HELP_MESSAGE',
+        ] as $key) {
+            if (isset($field[$key])) {
+                $params[$key] = $field[$key];
+            }
+        }
+
+        return [
+            'entityId' => $field['ENTITY_ID'],
+            'fieldName' => $field['FIELD_NAME'],
+            'userTypeId' => $field['USER_TYPE_ID'],
+            'providerType' => $field['USER_TYPE_ID'],
+            'params' => $params,
+        ];
     }
 
     /**

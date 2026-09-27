@@ -10,3 +10,4 @@ $MESS['MODULE_OPTION_USER_FIELDS_REGISTRY_COL_CLASS'] = 'Класс';
 $MESS['MODULE_OPTION_USER_FIELDS_REGISTRY_STATUS_YES'] = 'Создано';
 $MESS['MODULE_OPTION_USER_FIELDS_REGISTRY_STATUS_NO'] = 'Не создано';
 $MESS['MODULE_OPTION_USER_FIELDS_REGISTRY_EMPTY'] = 'Нет пользовательских полей для миграции';
+$MESS['MODULE_OPTION_USER_FIELDS_REGISTRY_EXPAND'] = 'Нажмите на строку, чтобы увидеть класс миграции';
