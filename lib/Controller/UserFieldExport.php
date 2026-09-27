@@ -2,24 +2,43 @@
 
 namespace Base\Module\Controller;
 
-use Base\Module\Controller\Filter\AdminFilter;
 use Base\Module\Exception\ModuleException;
 use Base\Module\Service\Container;
 use Base\Module\Service\Migration\UserField\UserFieldEntity;
 use Base\Module\Service\Migration\UserField\UserFieldService as IUserFieldService;
 use Base\Module\Service\Tool\ClassList;
-use Bitrix\Main\Engine\ActionFilter\Authentication;
+use Bitrix\Main\Engine\ActionFilter\ClosureWrapper;
 use Bitrix\Main\Engine\Controller;
+use Bitrix\Main\Engine\CurrentUser;
+use Bitrix\Main\Error;
+use Bitrix\Main\EventResult;
+use Bitrix\Main\Localization\Loc;
 
 class UserFieldExport extends Controller
 {
+    /**
+     * Действия доступны только авторизованному администратору.
+     *
+     * @return array
+     */
     protected function getDefaultPreFilters(): array
     {
-        return [
-            new Authentication(),
-            new AdminFilter(),
-        ];
+        return array_merge(parent::getDefaultPreFilters(), [
+            new ClosureWrapper(function () {
+                if (CurrentUser::get()->isAdmin()) {
+                    return null;
+                }
+
+                $this->addError(new Error(
+                    Loc::getMessage('MODULE_CONTROLLER_USER_FIELD_EXPORT_ACCESS_DENIED') ?: 'Access denied',
+                    'access_denied'
+                ));
+
+                return new EventResult(EventResult::ERROR, null, null, $this);
+            }),
+        ]);
     }
+
     /**
      * @return array<string, mixed>
      * @throws ModuleException
