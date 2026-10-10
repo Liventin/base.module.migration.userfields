@@ -25,6 +25,7 @@ interface UserFieldService
     /**
      * @return array<int, array{
      *     entityId: string,
+     *     entityName: string,
      *     fieldName: string,
      *     userTypeId: string,
      *     label: string,

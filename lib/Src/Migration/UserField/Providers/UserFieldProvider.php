@@ -7,6 +7,15 @@ use Base\Module\Src\Migration\UserField\Providers\UserFieldExportable;
 class UserFieldProvider implements UserFieldExportable
 {
     /**
+     * Каталог миграций пользовательских полей внутри lib/ модуля.
+     * ClassList выводит namespace из пути файла, поэтому namespace
+     * генерируемых классов обязан повторять этот каталог.
+     */
+    public const MIGRATION_DIR = 'UserFields';
+
+    private const NAMESPACE_SUFFIX = '\\Migration\\UserFields';
+
+    /**
      * Базовые поля Bitrix, которые переносятся в миграцию как есть.
      * Должны совпадать с ключами, которые читает makeFile().
      */
@@ -166,10 +175,22 @@ class UserFieldProvider implements UserFieldExportable
         $className = self::toClassName($fieldName);
         $userTypeId = self::quote((string)$fieldData['userTypeId']);
         $params = $fieldData['params'] ?? [];
+        $entityName = trim((string)($fieldData['entityName'] ?? ''));
+
+        // Имя сущности в коде: человеку, работающему с Битрикс, по одному коду
+        // IBLOCK_3_SECTION понятно только, что это разделы инфоблока 3, но не
+        // какого. Дописываем имя инфоблока рядом с кодом — больше пояснений
+        // не требуется.
+        $docblock = '';
+        if ($entityName !== '') {
+            $docblock = "/**\n * " . str_replace('*/', '* /', $entityName)
+                . " (" . (string)$fieldData['entityId'] . ")\n */\n";
+        }
 
         return "<?php\n\n" .
-            "namespace $namespace\\Migration;\n\n" .
+            "namespace $namespace" . self::NAMESPACE_SUFFIX . ";\n\n" .
             "use $namespace\\Service\\Migration\\UserField\\UserFieldEntity;\n\n" .
+            $docblock .
             "class $className implements UserFieldEntity\n" .
             "{\n" .
             "    public static function getEntityId(): string\n" .

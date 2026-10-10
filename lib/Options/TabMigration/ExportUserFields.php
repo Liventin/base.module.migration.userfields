@@ -54,8 +54,6 @@ class ExportUserFields implements Option
         $vendor = explode('.', $moduleId)[0];
         $shortModuleId = substr($moduleId, strlen($vendor) + 1);
         $actionPrefix = $vendor . ':' . $shortModuleId . '.api.UserFieldExport';
-        $listUrl = '/bitrix/services/main/ajax.php?action=' . $actionPrefix . '.list';
-        $exportUrl = '/bitrix/services/main/ajax.php?action=' . $actionPrefix . '.export';
 
         $messages = [
             'title' => Loc::getMessage('MODULE_OPTION_USER_FIELDS_EXPORT_TITLE'),
@@ -67,24 +65,19 @@ class ExportUserFields implements Option
         ];
 
         $js = "var lang = " . json_encode($messages, JSON_UNESCAPED_UNICODE) . ";\n"
-            . "var sessionId = BX.bitrix_sessid();\n"
-            . "function ufExportPost(url, data) {\n"
-            . "    data.sessid = sessionId;\n"
-            . "    return fetch(url, {\n"
-            . "        method: 'POST',\n"
-            . "        headers: {'Content-Type': 'application/x-www-form-urlencoded'},\n"
-            . "        credentials: 'same-origin',\n"
-            . "        body: Object.keys(data).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(data[k]); }).join('&')\n"
-            . "    }).then(function (r) { return r.json(); });\n"
+            . "function ufExportError(response) {\n"
+            . "    if (response && response.errors && response.errors.length) { return response.errors[0].message; }\n"
+            . "    return 'error';\n"
             . "}\n"
-            . "ufExportPost('" . $listUrl . "', {}).then(function (d) {\n"
-            . "    if (!d.data) { alert(d.errors ? d.errors[0].message : 'error'); return; }\n"
-            . "    var data = d.data;\n"
+            . "BX.ajax.runAction('" . $actionPrefix . ".list', {}).then(function (response) {\n"
+            . "    var data = response.data;\n"
             . "    var box = BX.create('div', {style: {padding: '16px 20px', boxSizing: 'border-box'}});\n"
             . "    var entities = [];\n"
             . "    var seen = {};\n"
             . "    data.fields.forEach(function (f) {\n"
-            . "        if (!seen[f.entityId]) { seen[f.entityId] = true; entities.push({value: f.entityId, text: f.entityId}); }\n"
+            . "        if (seen[f.entityId]) { return; }\n"
+            . "        seen[f.entityId] = true;\n"
+            . "        entities.push({value: f.entityId, text: f.entityName ? f.entityName + ' (' + f.entityId + ')' : f.entityId});\n"
             . "    });\n"
             . "    var entitySelect = BX.create('select', {props: {id: 'uf-export-entity'}, style: {width: '520px', maxWidth: '520px'}});\n"
             . "    entities.forEach(function (e) {\n"
@@ -128,14 +121,16 @@ class ExportUserFields implements Option
             . "                text: lang.ok,\n"
             . "                className: 'popup-window-button-accept',\n"
             . "                events: {click: function () {\n"
-            . "                    ufExportPost('" . $exportUrl . "', {\n"
-            . "                        entityId: entitySelect.value,\n"
-            . "                        fieldName: fieldSelect.value,\n"
-            . "                        providerType: providerSelect.value\n"
-            . "                    }).then(function (resp) {\n"
-            . "                        if (resp.data && resp.data.success) { location.reload(); }\n"
-            . "                        else { alert(resp.data && resp.data.error ? resp.data.error : 'error'); }\n"
-            . "                    });\n"
+            . "                    BX.ajax.runAction('" . $actionPrefix . ".export', {\n"
+            . "                        data: {\n"
+            . "                            entityId: entitySelect.value,\n"
+            . "                            fieldName: fieldSelect.value,\n"
+            . "                            providerType: providerSelect.value\n"
+            . "                        }\n"
+            . "                    }).then(function (response) {\n"
+            . "                        if (response.data && response.data.success) { location.reload(); }\n"
+            . "                        else { alert(response.data && response.data.error ? response.data.error : 'error'); }\n"
+            . "                    }).catch(function (response) { alert(ufExportError(response)); });\n"
             . "                }}\n"
             . "            }),\n"
             . "            new BX.PopupWindowButtonLink({\n"
@@ -147,7 +142,7 @@ class ExportUserFields implements Option
             . "        events: {onPopupClose: function () { this.destroy(); }}\n"
             . "    });\n"
             . "    popup.show();\n"
-            . "});";
+            . "}).catch(function (response) { alert(ufExportError(response)); });";
 
         return $provider
             ->setAlign('right')

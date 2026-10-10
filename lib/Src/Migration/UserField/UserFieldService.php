@@ -5,6 +5,8 @@ namespace Base\Module\Src\Migration\UserField;
 use Base\Module\Exception\ModuleException;
 use Base\Module\Service\Migration\UserField\UserFieldEntity;
 use Bitrix\Main\Loader;
+use CCrmOwnerType;
+use CIBlock;
 use CUserTypeEntity;
 use Base\Module\Service\Container;
 use Base\Module\Service\LazyService;
@@ -190,6 +192,111 @@ class UserFieldService
     }
 
     /**
+     * Наименования сущностей пользовательских полей: [ENTITY_ID => caption].
+     *
+     * Сами записи UF хранят только идентификатор (CRM_LEAD, CRM_4, IBLOCK_3_SECTION, …),
+     * поэтому человекочитаемое название достаём у ядра: для CRM-сущностей — у
+     * CCrmOwnerType, для инфоблоков — у самого инфоблока. Сущности, названия
+     * которых ядро не отдаёт (пользователи, HL-блоки), остаются без названия —
+     * вызывающий код показывает идентификатор.
+     *
+     * @return array<string, string>
+     */
+    public function getEntityNames(): array
+    {
+        $names = $this->getCrmEntityNames();
+
+        foreach ($this->getIblockEntityNames() as $entityId => $caption) {
+            if (!isset($names[$entityId])) {
+                $names[$entityId] = $caption;
+            }
+        }
+
+        return $names;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function getCrmEntityNames(): array
+    {
+        $names = [];
+
+        if (!Loader::includeModule('crm') || !class_exists(CCrmOwnerType::class)) {
+            return $names;
+        }
+
+        foreach (CCrmOwnerType::GetAllDescriptions() as $typeId => $caption) {
+            $entityId = CCrmOwnerType::ResolveUserFieldEntityID((int)$typeId);
+            if ($entityId !== '' && $caption !== '' && !isset($names[$entityId])) {
+                $names[$entityId] = (string)$caption;
+            }
+        }
+
+        return $names;
+    }
+
+    /**
+     * Наименования инфоблоков: [IBLOCK_3_SECTION => «Подразделения»].
+     *
+     * Пользовательские поля информационных блоков живут под идентификаторами
+     * вида IBLOCK_<id>_SECTION / IBLOCK_<id>_ELEMENT, где <id> — ID инфоблока.
+     * Для таких сущностей показываем имя инфоблока: сам код уже говорит
+     * подготовленному человеку, что это разделы (или элементы) данного инфоблока.
+     *
+     * @return array<string, string>
+     */
+    private function getIblockEntityNames(): array
+    {
+        $names = [];
+
+        if (!Loader::includeModule('iblock') || !class_exists(CIBlock::class)) {
+            return $names;
+        }
+
+        $result = [];
+        $rsFields = CUserTypeEntity::GetList([], ['LANG' => LANGUAGE_ID]);
+        while ($field = $rsFields->Fetch()) {
+            $entityId = (string)$field['ENTITY_ID'];
+            if (!preg_match('/^IBLOCK_(\d+)(?:_(SECTION|ELEMENT))?$/', $entityId, $matches)) {
+                continue;
+            }
+
+            $iblockId = (int)$matches[1];
+            if (isset($result[$iblockId])) {
+                continue;
+            }
+
+            $result[$iblockId] = (string)CIBlock::GetArrayByID($iblockId, 'NAME');
+        }
+
+        foreach ($result as $iblockId => $caption) {
+            if ($caption === '') {
+                continue;
+            }
+            $names['IBLOCK_' . $iblockId . '_SECTION'] = $caption;
+            $names['IBLOCK_' . $iblockId . '_ELEMENT'] = $caption;
+            $names['IBLOCK_' . $iblockId] = $caption;
+        }
+
+        return $names;
+    }
+
+    /**
+     * Человекочитаемое наименование сущности по её идентификатору.
+     * Пустая строка, если ядро названия не отдаёт (пользователи, HL-блоки).
+     *
+     * @param string $entityId
+     * @return string
+     */
+    public function getEntityName(string $entityId): string
+    {
+        $names = $this->getEntityNames();
+
+        return $names[$entityId] ?? '';
+    }
+
+    /**
      * @param string $type
      * @return BaseUserFieldProvider
      * @throws ModuleException
@@ -208,6 +315,7 @@ class UserFieldService
     /**
      * @return array<int, array{
      *     entityId: string,
+     *     entityName: string,
      *     fieldName: string,
      *     userTypeId: string,
      *     label: string,
@@ -223,6 +331,7 @@ class UserFieldService
         }
 
         $result = [];
+        $entityNames = $this->getEntityNames();
         $rsFields = CUserTypeEntity::GetList([], ['LANG' => LANGUAGE_ID]);
         while ($field = $rsFields->Fetch()) {
             $key = $field['ENTITY_ID'] . '::' . $field['FIELD_NAME'];
@@ -240,6 +349,7 @@ class UserFieldService
 
             $result[] = [
                 'entityId' => $field['ENTITY_ID'],
+                'entityName' => $entityNames[$field['ENTITY_ID']] ?? '',
                 'fieldName' => $field['FIELD_NAME'],
                 'userTypeId' => $field['USER_TYPE_ID'],
                 'label' => $label,
@@ -299,6 +409,7 @@ class UserFieldService
 
         $namespace = str_replace('.', '\\', ucwords($this->moduleId, '.'));
         $fieldData = $provider->buildFieldData($field);
+        $fieldData['entityName'] = $this->getEntityName((string)$field['ENTITY_ID']);
 
         $code = $provider->makeFile($fieldData, $namespace);
 
@@ -307,7 +418,7 @@ class UserFieldService
             return ['success' => false, 'error' => 'Module dir not found'];
         }
 
-        $migrationDir = $moduleDir . '/lib/Migration';
+        $migrationDir = $moduleDir . '/lib/Migration/' . BaseUserFieldProvider::MIGRATION_DIR;
         if (!is_dir($migrationDir) && !mkdir($migrationDir, 0755, true) && !is_dir($migrationDir)) {
             return ['success' => false, 'error' => 'Cannot create migration dir: ' . $migrationDir];
         }
