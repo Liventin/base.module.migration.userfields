@@ -308,12 +308,14 @@ class UserFieldService
         }
 
         $migrationDir = $moduleDir . '/lib/Migration';
-        if (!is_dir($migrationDir)) {
-            mkdir($migrationDir, 0755, true);
+        if (!is_dir($migrationDir) && !mkdir($migrationDir, 0755, true) && !is_dir($migrationDir)) {
+            return ['success' => false, 'error' => 'Cannot create migration dir: ' . $migrationDir];
         }
 
         $filePath = $migrationDir . '/' . BaseUserFieldProvider::toClassName($fieldName) . '.php';
-        file_put_contents($filePath, $code);
+        if (file_put_contents($filePath, $code) === false) {
+            return ['success' => false, 'error' => 'Cannot write migration file: ' . $filePath];
+        }
 
         return ['success' => true, 'file' => $filePath];
     }
