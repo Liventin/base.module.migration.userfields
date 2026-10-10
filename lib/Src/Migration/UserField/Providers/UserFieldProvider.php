@@ -6,6 +6,17 @@ use Base\Module\Src\Migration\UserField\Providers\UserFieldExportable;
 
 class UserFieldProvider implements UserFieldExportable
 {
+    /**
+     * Базовые поля Bitrix, которые переносятся в миграцию как есть.
+     * Должны совпадать с ключами, которые читает makeFile().
+     */
+    private const COMMON_FIELD_KEYS = [
+        'XML_ID', 'SORT', 'MULTIPLE', 'MANDATORY', 'SHOW_FILTER',
+        'SHOW_IN_LIST', 'EDIT_IN_LIST', 'IS_SEARCHABLE', 'SETTINGS',
+        'EDIT_FORM_LABEL', 'LIST_COLUMN_LABEL', 'LIST_FILTER_LABEL',
+        'ERROR_MESSAGE', 'HELP_MESSAGE',
+    ];
+
     protected string $sort = '100';
     protected string $multiple = 'N';
     protected string $mandatory = 'N';
@@ -87,6 +98,35 @@ class UserFieldProvider implements UserFieldExportable
             'EDIT_FORM_LABEL' => ['ru' => $label],
             'LIST_COLUMN_LABEL' => ['ru' => $label],
             'LIST_FILTER_LABEL' => ['ru' => $label],
+        ];
+    }
+
+    /**
+     * Приводит запись пользовательского поля Bitrix к виду, которым
+     * оперирует миграция (та же форма, что читает makeFile()).
+     *
+     * Знание о базовых полях Bitrix живёт здесь, рядом с makeFile(),
+     * а не в сервисе: сервис только достаёт запись из БД и отдаёт её
+     * провайдеру.
+     *
+     * @param array $field запись из CUserTypeEntity::GetList()
+     * @return array
+     */
+    public function buildFieldData(array $field): array
+    {
+        $params = [];
+        foreach (self::COMMON_FIELD_KEYS as $key) {
+            if (isset($field[$key])) {
+                $params[$key] = $field[$key];
+            }
+        }
+
+        return [
+            'entityId' => $field['ENTITY_ID'],
+            'fieldName' => $field['FIELD_NAME'],
+            'userTypeId' => $field['USER_TYPE_ID'],
+            'providerType' => $field['USER_TYPE_ID'],
+            'params' => $params,
         ];
     }
 

@@ -298,7 +298,7 @@ class UserFieldService
         }
 
         $namespace = str_replace('.', '\\', ucwords($this->moduleId, '.'));
-        $fieldData = $this->buildFieldData($field);
+        $fieldData = $provider->buildFieldData($field);
 
         $code = $provider->makeFile($fieldData, $namespace);
 
@@ -336,33 +336,6 @@ class UserFieldService
     }
 
     /**
-     * @param array $field
-     * @return array
-     */
-    private function buildFieldData(array $field): array
-    {
-        $params = [];
-        foreach ([
-            'XML_ID', 'SORT', 'MULTIPLE', 'MANDATORY', 'SHOW_FILTER',
-            'SHOW_IN_LIST', 'EDIT_IN_LIST', 'IS_SEARCHABLE', 'SETTINGS',
-            'EDIT_FORM_LABEL', 'LIST_COLUMN_LABEL', 'LIST_FILTER_LABEL',
-            'ERROR_MESSAGE', 'HELP_MESSAGE',
-        ] as $key) {
-            if (isset($field[$key])) {
-                $params[$key] = $field[$key];
-            }
-        }
-
-        return [
-            'entityId' => $field['ENTITY_ID'],
-            'fieldName' => $field['FIELD_NAME'],
-            'userTypeId' => $field['USER_TYPE_ID'],
-            'providerType' => $field['USER_TYPE_ID'],
-            'params' => $params,
-        ];
-    }
-
-    /**
      * @return void
      * @throws ModuleException
      */
@@ -379,7 +352,6 @@ class UserFieldService
         $moduleRoot = Loader::getLocal('modules/' . $classList->getModuleCode() . '/lib');
         $relativePath = str_replace($moduleRoot, '', __DIR__ . '/Providers');
 
-        $classList = Container::get(ClassList::SERVICE_CODE);
         $providerClasses = $classList->setSubClassesFilter([BaseUserFieldProvider::class])->getFromLib($relativePath);
 
         foreach ($providerClasses as $className) {
