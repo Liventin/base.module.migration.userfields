@@ -23,6 +23,17 @@ redirect (optional)
   }
 }
 ```
+buttons row provider (optional)
+```
+"require": {
+    "liventin/base.module.options.provider.js.buttons.row": "^1.0.0"
+}
+```
+The export tab (`User Fields → Export`) is rendered by the buttons-row option
+provider. The service does **not** require that package: with a service-redirect
+the providers are registered in the receiving module only, so a hard dependency
+would install the provider where it is never used. Install it in the project when
+you need the export tab — without it the tab renders as an empty row.
 <table>
 <tr>
 <th>User Field Providers</th>
