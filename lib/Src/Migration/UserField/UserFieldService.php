@@ -8,6 +8,8 @@ use Bitrix\Main\Loader;
 use CCrmOwnerType;
 use CIBlock;
 use CUserTypeEntity;
+use Bitrix\Highloadblock\HighloadBlockTable;
+use Bitrix\Highloadblock\HighloadBlockLangTable;
 use Base\Module\Service\Container;
 use Base\Module\Service\LazyService;
 use Base\Module\Service\Migration\UserField\UserFieldService as IUserFieldService;
@@ -194,10 +196,11 @@ class UserFieldService
     /**
      * Наименования сущностей пользовательских полей: [ENTITY_ID => caption].
      *
-     * Сами записи UF хранят только идентификатор (CRM_LEAD, CRM_4, IBLOCK_3_SECTION, …),
-     * поэтому человекочитаемое название достаём у ядра: для CRM-сущностей — у
-     * CCrmOwnerType, для инфоблоков — у самого инфоблока. Сущности, названия
-     * которых ядро не отдаёт (пользователи, HL-блоки), остаются без названия —
+     * Сами записи UF хранят только идентификатор (CRM_LEAD, CRM_4, IBLOCK_3_SECTION,
+     * HLBLOCK_1, …), поэтому человекочитаемое название достаём у ядра: для
+     * CRM-сущностей — у CCrmOwnerType, для инфоблоков — у самого инфоблока,
+     * для HL-блоков — у HighloadBlockTable (языковое название). Сущности,
+     * названия которых ядро не отдаёт (пользователи), остаются без названия —
      * вызывающий код показывает идентификатор.
      *
      * @return array<string, string>
@@ -207,6 +210,12 @@ class UserFieldService
         $names = $this->getCrmEntityNames();
 
         foreach ($this->getIblockEntityNames() as $entityId => $caption) {
+            if (!isset($names[$entityId])) {
+                $names[$entityId] = $caption;
+            }
+        }
+
+        foreach ($this->getHighloadBlockEntityNames() as $entityId => $caption) {
             if (!isset($names[$entityId])) {
                 $names[$entityId] = $caption;
             }
@@ -283,8 +292,53 @@ class UserFieldService
     }
 
     /**
+     * Наименования HL-блоков: [HLBLOCK_1 => «Типы групп товаров»].
+     *
+     * Пользовательские поля HL-блоков живут под идентификатором вида HLBLOCK_<id>.
+     * Имя блока хранится отдельно от таблицы — в языковой таблице, поэтому берём
+     * название по текущему языку (ru), с откатом на техническое NAME.
+     * Код HLBLOCK_<id> человеку ничего не говорит, поэтому показываем имя блока.
+     *
+     * @return array<string, string>
+     */
+    private function getHighloadBlockEntityNames(): array
+    {
+        $names = [];
+
+        if (!Loader::includeModule('highloadblock')) {
+            return $names;
+        }
+
+        if (!class_exists(HighloadBlockTable::class) || !class_exists(HighloadBlockLangTable::class)) {
+            return $names;
+        }
+
+        $langTitles = [];
+        $rsLangs = HighloadBlockLangTable::getList(['select' => ['ID', 'LID', 'NAME']]);
+        while ($row = $rsLangs->fetch()) {
+            $hlId = (int)$row['ID'];
+            if (!isset($langTitles[$hlId]) || $row['LID'] === LANGUAGE_ID) {
+                $langTitles[$hlId] = (string)$row['NAME'];
+            }
+        }
+
+        $rsBlocks = HighloadBlockTable::getList(['select' => ['ID', 'NAME']]);
+        while ($block = $rsBlocks->fetch()) {
+            $hlId = (int)$block['ID'];
+            $caption = $langTitles[$hlId] ?? (string)$block['NAME'];
+            if ($caption === '') {
+                continue;
+            }
+
+            $names['HLBLOCK_' . $hlId] = $caption;
+        }
+
+        return $names;
+    }
+
+    /**
      * Человекочитаемое наименование сущности по её идентификатору.
-     * Пустая строка, если ядро названия не отдаёт (пользователи, HL-блоки).
+     * Пустая строка, если ядро названия не отдаёт (пользователи).
      *
      * @param string $entityId
      * @return string
