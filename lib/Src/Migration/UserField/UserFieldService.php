@@ -492,14 +492,13 @@ class UserFieldService
      */
     private function findField(string $entityId, string $fieldName): ?array
     {
-        $rs = CUserTypeEntity::GetList([], ['LANG' => LANGUAGE_ID]);
-        while ($field = $rs->Fetch()) {
-            if ($field['ENTITY_ID'] === $entityId && $field['FIELD_NAME'] === $fieldName) {
-                return $field;
-            }
-        }
+        $rs = CUserTypeEntity::GetList([], [
+            'ENTITY_ID' => $entityId,
+            'FIELD_NAME' => $fieldName,
+            'LANG' => LANGUAGE_ID,
+        ]);
 
-        return null;
+        return ($field = $rs->Fetch()) ?: null;
     }
 
     /**
