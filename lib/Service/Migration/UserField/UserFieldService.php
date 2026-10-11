@@ -23,27 +23,28 @@ interface UserFieldService
     public function getExportableProviders(): array;
 
     /**
-     * @return array<int, array{
-     *     entityId: string,
-     *     entityName: string,
-     *     fieldName: string,
-     *     userTypeId: string,
-     *     label: string,
-     * }>
-     */
-    public function getAvailableFields(): array;
-
-    /**
+     * Экспортирует пользовательское поле в класс миграции.
+     *
+     * Наименование сущности передаёт вызывающий код: логика его определения
+     * живёт в сервисе кнопки (OptionExportButtonService), а не здесь — иначе
+     * определение имён пришлось бы дублировать в каждом модуле-источнике.
+     *
      * @param string $entityId
      * @param string $fieldName
      * @param string $providerType
+     * @param string $entityName человекочитаемое имя сущности для docblock
      * @return array{
      *     success: bool,
      *     file?: string,
      *     error?: string,
      * }
      */
-    public function exportField(string $entityId, string $fieldName, string $providerType): array;
+    public function exportField(
+        string $entityId,
+        string $fieldName,
+        string $providerType,
+        string $entityName = ''
+    ): array;
 
     /**
      * @return array<int, array{

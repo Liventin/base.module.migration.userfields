@@ -2,9 +2,10 @@
 
 namespace Base\Module\Options\TabMigration;
 
+use Base\Module\Exception\ModuleException;
 use Base\Module\Options\TabMigration;
 use Base\Module\Service\Container;
-use Base\Module\Service\LazyService;
+use Base\Module\Service\Migration\UserField\OptionExportButtonService as IOptionExportButtonService;
 use Base\Module\Service\Options\Option;
 use Base\Module\Service\Options\OptionsService;
 use Bitrix\Main\Localization\Loc;
@@ -38,6 +39,7 @@ class ExportUserFields implements Option
 
     /**
      * @return array
+     * @throws ModuleException
      */
     public static function getParams(): array
     {
@@ -50,106 +52,20 @@ class ExportUserFields implements Option
             return [];
         }
 
-        $moduleId = LazyService::MODULE_ID;
-        $vendor = explode('.', $moduleId)[0];
-        $shortModuleId = substr($moduleId, strlen($vendor) + 1);
-        $actionPrefix = $vendor . ':' . $shortModuleId . '.api.UserFieldExport';
-
-        $messages = [
-            'title' => Loc::getMessage('MODULE_OPTION_USER_FIELDS_EXPORT_TITLE'),
-            'entity' => Loc::getMessage('MODULE_OPTION_USER_FIELDS_EXPORT_ENTITY'),
-            'field' => Loc::getMessage('MODULE_OPTION_USER_FIELDS_EXPORT_FIELD'),
-            'provider' => Loc::getMessage('MODULE_OPTION_USER_FIELDS_EXPORT_PROVIDER'),
-            'ok' => Loc::getMessage('MODULE_OPTION_USER_FIELDS_EXPORT_OK'),
-            'cancel' => Loc::getMessage('MODULE_OPTION_USER_FIELDS_EXPORT_CANCEL'),
-        ];
-
-        $js = "var lang = " . json_encode($messages, JSON_UNESCAPED_UNICODE) . ";\n"
-            . "function ufExportError(response) {\n"
-            . "    if (response && response.errors && response.errors.length) { return response.errors[0].message; }\n"
-            . "    return 'error';\n"
-            . "}\n"
-            . "BX.ajax.runAction('" . $actionPrefix . ".list', {}).then(function (response) {\n"
-            . "    var data = response.data;\n"
-            . "    var box = BX.create('div', {style: {padding: '16px 20px', boxSizing: 'border-box'}});\n"
-            . "    var entities = [];\n"
-            . "    var seen = {};\n"
-            . "    data.fields.forEach(function (f) {\n"
-            . "        if (seen[f.entityId]) { return; }\n"
-            . "        seen[f.entityId] = true;\n"
-            . "        entities.push({value: f.entityId, text: f.entityName ? f.entityName + ' (' + f.entityId + ')' : f.entityId});\n"
-            . "    });\n"
-            . "    var entitySelect = BX.create('select', {props: {id: 'uf-export-entity'}, style: {width: '520px', maxWidth: '520px'}});\n"
-            . "    entities.forEach(function (e) {\n"
-            . "        entitySelect.appendChild(BX.create('option', {props: {value: e.value}, text: e.text}));\n"
-            . "    });\n"
-            . "    var fieldSelect = BX.create('select', {props: {id: 'uf-export-field'}, style: {width: '520px', maxWidth: '520px'}});\n"
-            . "    var providerSelect = BX.create('select', {props: {id: 'uf-export-provider'}, style: {width: '520px', maxWidth: '520px'}});\n"
-            . "    data.providers.forEach(function (p) {\n"
-            . "        providerSelect.appendChild(BX.create('option', {props: {value: p.type}, text: p.label}));\n"
-            . "    });\n"
-            . "    function fillFields(entityId) {\n"
-            . "        while (fieldSelect.firstChild) { fieldSelect.removeChild(fieldSelect.firstChild); }\n"
-            . "        data.fields.forEach(function (f) {\n"
-            . "            if (f.entityId !== entityId) { return; }\n"
-            . "            var fieldText = (f.label && f.label !== f.fieldName) ? f.fieldName + ' — ' + f.label : f.fieldName;\n"
-            . "            fieldSelect.appendChild(BX.create('option', {props: {value: f.fieldName}, text: fieldText}));\n"
-            . "        });\n"
-            . "    }\n"
-            . "    box.appendChild(BX.create('div', {style: {display: 'flex', alignItems: 'center', marginBottom: '10px'}, children: [\n"
-            . "        BX.create('label', {style: {width: '110px', color: '#535c69'}, text: lang.entity + ':'}), entitySelect\n"
-            . "    ]}));\n"
-            . "    box.appendChild(BX.create('div', {style: {display: 'flex', alignItems: 'center', marginBottom: '10px'}, children: [\n"
-            . "        BX.create('label', {style: {width: '110px', color: '#535c69'}, text: lang.field + ':'}), fieldSelect\n"
-            . "    ]}));\n"
-            . "    box.appendChild(BX.create('div', {style: {display: 'flex', alignItems: 'center', marginBottom: '10px'}, children: [\n"
-            . "        BX.create('label', {style: {width: '110px', color: '#535c69'}, text: lang.provider + ':'}), providerSelect\n"
-            . "    ]}));\n"
-            . "    if (entities.length) { fillFields(entities[0].value); }\n"
-            . "    BX.bind(entitySelect, 'change', function () { fillFields(this.value); });\n"
-            . "    var popup = new BX.PopupWindow('userfield-export', null, {\n"
-            . "        zIndex: 200,\n"
-            . "        width: 700,\n"
-            . "        content: box,\n"
-            . "        titleBar: lang.title,\n"
-            . "        closeIcon: true,\n"
-            . "        closeByEsc: true,\n"
-            . "        autoHide: false,\n"
-            . "        overlay: {backgroundColor: 'black', opacity: 40},\n"
-            . "        buttons: [\n"
-            . "            new BX.PopupWindowButton({\n"
-            . "                text: lang.ok,\n"
-            . "                className: 'popup-window-button-accept',\n"
-            . "                events: {click: function () {\n"
-            . "                    BX.ajax.runAction('" . $actionPrefix . ".export', {\n"
-            . "                        data: {\n"
-            . "                            entityId: entitySelect.value,\n"
-            . "                            fieldName: fieldSelect.value,\n"
-            . "                            providerType: providerSelect.value\n"
-            . "                        }\n"
-            . "                    }).then(function (response) {\n"
-            . "                        if (response.data && response.data.success) { location.reload(); }\n"
-            . "                        else { alert(response.data && response.data.error ? response.data.error : 'error'); }\n"
-            . "                    }).catch(function (response) { alert(ufExportError(response)); });\n"
-            . "                }}\n"
-            . "            }),\n"
-            . "            new BX.PopupWindowButtonLink({\n"
-            . "                text: lang.cancel,\n"
-            . "                className: 'popup-window-button-link-cancel',\n"
-            . "                events: {click: function () { popup.close(); }}\n"
-            . "            })\n"
-            . "        ],\n"
-            . "        events: {onPopupClose: function () { this.destroy(); }}\n"
-            . "    });\n"
-            . "    popup.show();\n"
-            . "}).catch(function (response) { alert(ufExportError(response)); });";
+        // Всё, что касается кнопки — тексты и JS, который её рисует, — живёт
+        // в сервисе. Здесь остаётся только вызов: при перенаправлении
+        // реализация подставляется из модуля-приёмника, поэтому одна и та же
+        // «портянка» JS не дублируется в каждом модуле на коробке.
+        /** @var IOptionExportButtonService $buttonService */
+        $buttonService = Container::get(IOptionExportButtonService::SERVICE_CODE);
+        $button = $buttonService->getButton();
 
         return $provider
             ->setAlign('right')
             ->setButtons([
                 [
-                    'title' => Loc::getMessage('MODULE_OPTION_USER_FIELDS_EXPORT_BTN'),
-                    'js' => $js,
+                    'title' => $button['title'],
+                    'js' => $button['js'],
                 ],
             ])
             ->getParamsToArray();

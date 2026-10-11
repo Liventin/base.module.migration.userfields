@@ -4,39 +4,28 @@ namespace Base\Module\Controller;
 
 use Base\Module\Exception\ModuleException;
 use Base\Module\Service\Container;
+use Base\Module\Service\Migration\UserField\OptionExportButtonService as IOptionExportButtonService;
 use Base\Module\Service\Migration\UserField\UserFieldEntity;
 use Base\Module\Service\Migration\UserField\UserFieldService as IUserFieldService;
 use Base\Module\Service\Tool\ClassList;
-use Bitrix\Main\Engine\ActionFilter\ClosureWrapper;
 use Bitrix\Main\Engine\Controller;
-use Bitrix\Main\Engine\CurrentUser;
-use Bitrix\Main\Error;
-use Bitrix\Main\EventResult;
-use Bitrix\Main\Localization\Loc;
 
 class UserFieldExport extends Controller
 {
     /**
-     * Действия доступны только авторизованному администратору.
+     * Доступ к действиям и логика списка — в сервисе кнопки: при
+     * перенаправлении (service-redirect) реализация подставляется из
+     * модуля-приёмника, поэтому контроллер остаётся тонким.
      *
      * @return array
+     * @throws ModuleException
      */
     protected function getDefaultPreFilters(): array
     {
-        return array_merge(parent::getDefaultPreFilters(), [
-            new ClosureWrapper(function () {
-                if (CurrentUser::get()->isAdmin()) {
-                    return null;
-                }
-
-                $this->addError(new Error(
-                    Loc::getMessage('MODULE_CONTROLLER_USER_FIELD_EXPORT_ACCESS_DENIED') ?: 'Access denied',
-                    'access_denied'
-                ));
-
-                return new EventResult(EventResult::ERROR, null, null, $this);
-            }),
-        ]);
+        return array_merge(
+            parent::getDefaultPreFilters(),
+            $this->getButtonService()->getPreFilters()
+        );
     }
 
     /**
@@ -45,21 +34,16 @@ class UserFieldExport extends Controller
      */
     public function listAction(): array
     {
-        /** @var IUserFieldService $userFieldService */
-        $userFieldService = Container::get(IUserFieldService::SERVICE_CODE);
-
         /** @var ClassList $classList */
         $classList = Container::get(ClassList::SERVICE_CODE);
+
+        // Классы миграций ищем в lib модуля-источника: при перенаправлении
+        // классы лежат именно там, а сервис приёмника их не видит.
         $fields = $classList
             ->setSubClassesFilter([UserFieldEntity::class])
             ->getFromLib('Migration');
 
-        return [
-            'fields' => $userFieldService
-                ->setFields($fields)
-                ->getAvailableFields(),
-            'providers' => $userFieldService->getExportableProviders(),
-        ];
+        return $this->getButtonService()->getListData($fields);
     }
 
     /**
@@ -74,6 +58,20 @@ class UserFieldExport extends Controller
         /** @var IUserFieldService $userFieldService */
         $userFieldService = Container::get(IUserFieldService::SERVICE_CODE);
 
-        return $userFieldService->exportField($entityId, $fieldName, $providerType);
+        return $userFieldService->exportField(
+            $entityId,
+            $fieldName,
+            $providerType,
+            $this->getButtonService()->getEntityName($entityId)
+        );
+    }
+
+    /**
+     * @return IOptionExportButtonService
+     * @throws ModuleException
+     */
+    private function getButtonService(): IOptionExportButtonService
+    {
+        return Container::get(IOptionExportButtonService::SERVICE_CODE);
     }
 }
