@@ -154,9 +154,6 @@ class UserFieldService
             $entities[$entityId] = $entityId;
         }
 
-        // Скан по всем полям оправдан: строим карту «поле => запись» сразу для
-        // всех сущностей, которые описывают миграции. Массив в ENTITY_ID ядро
-        // не принимает, поэтому точечными выборками было бы N запросов.
         $existing = [];
         $rsFields = CUserTypeEntity::GetList([], ['LANG' => LANGUAGE_ID]);
         while ($field = $rsFields->Fetch()) {

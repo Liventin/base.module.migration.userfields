@@ -319,8 +319,6 @@ class OptionExportButtonService
     {
         $iblockIds = [];
 
-        // Ключ без модификатора — обычный LIKE: в ORM '%=FIELD' экранирует %,
-        // и выборка получается пустой.
         $rsFields = UserFieldTable::getList([
             'select' => ['ENTITY_ID'],
             'filter' => ['ENTITY_ID' => 'IBLOCK_%'],

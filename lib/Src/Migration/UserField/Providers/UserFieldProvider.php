@@ -177,10 +177,6 @@ class UserFieldProvider implements UserFieldExportable
         $params = $fieldData['params'] ?? [];
         $entityName = trim((string)($fieldData['entityName'] ?? ''));
 
-        // Имя сущности в коде: человеку, работающему с Битрикс, по одному коду
-        // IBLOCK_3_SECTION понятно только, что это разделы инфоблока 3, но не
-        // какого. Дописываем имя инфоблока рядом с кодом — больше пояснений
-        // не требуется.
         $docblock = '';
         if ($entityName !== '') {
             $docblock = "/**\n * " . str_replace('*/', '* /', $entityName)
