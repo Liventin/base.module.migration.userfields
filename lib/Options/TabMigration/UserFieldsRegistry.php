@@ -112,6 +112,7 @@ class UserFieldsRegistry implements Option
             ])
             ->setRows($rows)
             ->setEmpty(Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_EMPTY'))
+            ->setExpandLabel(Loc::getMessage('MODULE_OPTION_USER_FIELDS_REGISTRY_EXPAND'))
             ->getParamsToArray();
     }
 }

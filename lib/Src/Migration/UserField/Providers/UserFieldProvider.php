@@ -2,8 +2,21 @@
 
 namespace Base\Module\Src\Migration\UserField\Providers;
 
-class UserFieldProvider
+use Base\Module\Src\Migration\UserField\Providers\UserFieldExportable;
+
+class UserFieldProvider implements UserFieldExportable
 {
+    public const MIGRATION_DIR = 'UserFields';
+
+    private const NAMESPACE_SUFFIX = '\\Migration\\UserFields';
+
+    private const COMMON_FIELD_KEYS = [
+        'XML_ID', 'SORT', 'MULTIPLE', 'MANDATORY', 'SHOW_FILTER',
+        'SHOW_IN_LIST', 'EDIT_IN_LIST', 'IS_SEARCHABLE', 'SETTINGS',
+        'EDIT_FORM_LABEL', 'LIST_COLUMN_LABEL', 'LIST_FILTER_LABEL',
+        'ERROR_MESSAGE', 'HELP_MESSAGE',
+    ];
+
     protected string $sort = '100';
     protected string $multiple = 'N';
     protected string $mandatory = 'N';
@@ -88,6 +101,28 @@ class UserFieldProvider
         ];
     }
 
+    /**
+     * @param array $field запись из CUserTypeEntity::GetList()
+     * @return array
+     */
+    public function buildFieldData(array $field): array
+    {
+        $params = [];
+        foreach (self::COMMON_FIELD_KEYS as $key) {
+            if (isset($field[$key])) {
+                $params[$key] = $field[$key];
+            }
+        }
+
+        return [
+            'entityId' => $field['ENTITY_ID'],
+            'fieldName' => $field['FIELD_NAME'],
+            'userTypeId' => $field['USER_TYPE_ID'],
+            'providerType' => $field['USER_TYPE_ID'],
+            'params' => $params,
+        ];
+    }
+
     public function getParamsToArray(): array
     {
         $result = [
@@ -112,8 +147,96 @@ class UserFieldProvider
     {
     }
 
+    /**
+     * @param array $fieldData
+     * @param string $namespace namespace модуля (готовый, с \ разделителями)
+     * @return string
+     */
+    public function makeFile(array $fieldData, string $namespace): string
+    {
+        $entityId = self::quote((string)$fieldData['entityId']);
+        $fieldName = (string)$fieldData['fieldName'];
+        $className = self::toClassName($fieldName);
+        $userTypeId = self::quote((string)$fieldData['userTypeId']);
+        $params = $fieldData['params'] ?? [];
+        $entityName = trim((string)($fieldData['entityName'] ?? ''));
+
+        $docblock = '';
+        if ($entityName !== '') {
+            $docblock = "/**\n * " . str_replace('*/', '* /', $entityName)
+                . " (" . (string)$fieldData['entityId'] . ")\n */\n";
+        }
+
+        return "<?php\n\n" .
+            "namespace $namespace" . self::NAMESPACE_SUFFIX . ";\n\n" .
+            "use $namespace\\Service\\Migration\\UserField\\UserFieldEntity;\n\n" .
+            $docblock .
+            "class $className implements UserFieldEntity\n" .
+            "{\n" .
+            "    public static function getEntityId(): string\n" .
+            "    {\n" .
+            "        return $entityId;\n" .
+            "    }\n\n" .
+            "    public static function getFieldName(): string\n" .
+            "    {\n" .
+            "        return " . self::quote($fieldName) . ";\n" .
+            "    }\n\n" .
+            "    public static function getUserTypeId(): string\n" .
+            "    {\n" .
+            "        return $userTypeId;\n" .
+            "    }\n\n" .
+            "    public static function getParams(): array\n" .
+            "    {\n" .
+            "        return " . self::arrayToPhp($params) . ";\n" .
+            "    }\n" .
+            "}\n";
+    }
+
+    /**
+     * UF_DEPARTMENT -> UfDepartment, UF_CRM_1703946100 -> UfCrm1703946100
+     */
+    public static function toClassName(string $fieldName): string
+    {
+        $parts = explode('_', $fieldName);
+        $parts = array_map(static fn (string $p): string => ucfirst(strtolower($p)), $parts);
+
+        return implode('', $parts);
+    }
+
     public static function getType(): string
     {
         return 'base_user_type';
+    }
+
+    /**
+     * @param string $value
+     * @return string
+     */
+    private static function quote(string $value): string
+    {
+        return "'" . str_replace("'", "\\'", $value) . "'";
+    }
+
+    /**
+     * @param mixed $value
+     * @return string
+     */
+    private static function arrayToPhp(mixed $value): string
+    {
+        if (is_array($value)) {
+            $items = [];
+            foreach ($value as $key => $item) {
+                $keyPart = is_int($key) ? '' : self::quote((string)$key) . ' => ';
+                $items[] = $keyPart . self::arrayToPhp($item);
+            }
+            return '[' . implode(', ', $items) . ']';
+        }
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+        if (is_int($value) || is_float($value)) {
+            return (string)$value;
+        }
+        return self::quote((string)$value);
     }
 }

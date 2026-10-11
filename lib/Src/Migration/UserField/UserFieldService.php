@@ -3,12 +3,14 @@
 namespace Base\Module\Src\Migration\UserField;
 
 use Base\Module\Exception\ModuleException;
+use Base\Module\Service\Migration\SmartProcess\MigrateSmartProcessService;
 use Base\Module\Service\Migration\UserField\UserFieldEntity;
 use Bitrix\Main\Loader;
 use CUserTypeEntity;
 use Base\Module\Service\Container;
 use Base\Module\Service\LazyService;
 use Base\Module\Service\Migration\UserField\UserFieldService as IUserFieldService;
+use Base\Module\Src\Migration\UserField\Providers\UserFieldExportable;
 use Base\Module\Service\Tool\ClassList;
 use Base\Module\Src\Migration\UserField\Providers\UserFieldProvider as BaseUserFieldProvider;
 
@@ -126,6 +128,8 @@ class UserFieldService
     }
 
     /**
+     * Статус полей, описанных миграциями: существует ли поле в БД.
+     *
      * @return array<int, array{
      *     class: class-string,
      *     entityId: string,
@@ -205,6 +209,99 @@ class UserFieldService
     }
 
     /**
+     * @return array<int, array{
+     *     type: string,
+     *     label: string,
+     * }>
+     * @throws ModuleException
+     */
+    public function getExportableProviders(): array
+    {
+        $this->registerProviders();
+
+        $exportable = [];
+        foreach ($this->providers as $type => $className) {
+            $provider = new $className();
+            if ($provider instanceof UserFieldExportable) {
+                $exportable[] = [
+                    'type' => $type,
+                    'label' => $className::getType(),
+                ];
+            }
+        }
+
+        return $exportable;
+    }
+
+    /**
+     * @param string $entityId
+     * @param string $fieldName
+     * @param string $providerType
+     * @param string $entityName человекочитаемое имя сущности для docblock
+     * @return array{
+     *     success: bool,
+     *     file?: string,
+     *     error?: string,
+     * }
+     * @throws ModuleException
+     */
+    public function exportField(
+        string $entityId,
+        string $fieldName,
+        string $providerType,
+        string $entityName = ''
+    ): array {
+        $field = $this->findField($entityId, $fieldName);
+        if (!$field) {
+            return ['success' => false, 'error' => 'Field not found'];
+        }
+
+        $provider = $this->getProvider($providerType);
+        if (!($provider instanceof UserFieldExportable)) {
+            return ['success' => false, 'error' => 'Provider is not exportable'];
+        }
+
+        $namespace = str_replace('.', '\\', ucwords($this->moduleId, '.'));
+        $fieldData = $provider->buildFieldData($field);
+        $fieldData['entityName'] = $entityName;
+
+        $code = $provider->makeFile($fieldData, $namespace);
+
+        $moduleDir = Loader::getLocal('modules/' . $this->moduleId);
+        if ($moduleDir === false) {
+            return ['success' => false, 'error' => 'Module dir not found'];
+        }
+
+        $migrationDir = $moduleDir . '/lib/Migration/' . BaseUserFieldProvider::MIGRATION_DIR;
+        if (!is_dir($migrationDir) && !mkdir($migrationDir, 0755, true) && !is_dir($migrationDir)) {
+            return ['success' => false, 'error' => 'Cannot create migration dir: ' . $migrationDir];
+        }
+
+        $filePath = $migrationDir . '/' . BaseUserFieldProvider::toClassName($fieldName) . '.php';
+        if (file_put_contents($filePath, $code) === false) {
+            return ['success' => false, 'error' => 'Cannot write migration file: ' . $filePath];
+        }
+
+        return ['success' => true, 'file' => $filePath];
+    }
+
+    /**
+     * @param string $entityId
+     * @param string $fieldName
+     * @return array|null
+     */
+    private function findField(string $entityId, string $fieldName): ?array
+    {
+        $rs = CUserTypeEntity::GetList([], [
+            'ENTITY_ID' => $entityId,
+            'FIELD_NAME' => $fieldName,
+            'LANG' => LANGUAGE_ID,
+        ]);
+
+        return ($field = $rs->Fetch()) ?: null;
+    }
+
+    /**
      * @return void
      * @throws ModuleException
      */
@@ -221,7 +318,6 @@ class UserFieldService
         $moduleRoot = Loader::getLocal('modules/' . $classList->getModuleCode() . '/lib');
         $relativePath = str_replace($moduleRoot, '', __DIR__ . '/Providers');
 
-        $classList = Container::get(ClassList::SERVICE_CODE);
         $providerClasses = $classList->setSubClassesFilter([BaseUserFieldProvider::class])->getFromLib($relativePath);
 
         foreach ($providerClasses as $className) {
