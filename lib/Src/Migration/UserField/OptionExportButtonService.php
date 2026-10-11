@@ -22,13 +22,6 @@ use CUserTypeEntity;
 
 /**
  * Логика кнопки «Экспорт полей» и её контроллера.
- *
- * Всё, что относится к кнопке, живёт здесь: JS, который её рисует, данные для
- * диалога экспорта, фильтры доступа контроллера и человекочитаемые имена
- * сущностей пользовательских полей. За счёт этого при настроенном
- * перенаправлении (service-redirect) модуль-источник оставляет у себя только
- * вызовы методов сервиса, а сам код берётся сервис-локатором из
- * модуля-приёмника.
  */
 #[LazyService(
     serviceCode: IOptionExportButtonService::SERVICE_CODE,
@@ -39,10 +32,6 @@ class OptionExportButtonService
     private string $moduleId;
     private string $userFieldServiceCode;
 
-    /**
-     * @param string $moduleId модуль-источник вызова (при перенаправлении — он же)
-     * @param string $userFieldServiceCode код сервиса полей в текущей сборке
-     */
     public function __construct(string $moduleId, string $userFieldServiceCode)
     {
         $this->moduleId = $moduleId;
@@ -152,8 +141,6 @@ class OptionExportButtonService
     }
 
     /**
-     * Действия контроллера доступны только администратору.
-     *
      * @return array<int, \Bitrix\Main\Engine\ActionFilter\Base>
      */
     public function getPreFilters(): array
@@ -175,7 +162,7 @@ class OptionExportButtonService
     }
 
     /**
-     * @param array<int, class-string> $fieldClasses
+     * @param array<int, class-string> $fieldClasses классы миграций модуля-источника
      * @return array{fields: array<int, array>, providers: array<int, array>}
      * @throws ModuleException
      */
@@ -188,10 +175,6 @@ class OptionExportButtonService
     }
 
     /**
-     * Поля, для которых в модуле ещё нет класса миграции: их и предлагаем
-     * экспортировать. Классы миграций передаёт вызывающий код — они лежат в
-     * lib модуля-источника, и сервис приёмника их не видит.
-     *
      * @param array<int, class-string> $fieldClasses
      * @return array<int, array{
      *     entityId: string,
@@ -211,9 +194,6 @@ class OptionExportButtonService
         $result = [];
         $entityNames = $this->getEntityNames();
 
-        // Полный перечень полей здесь нужен по существу: чтобы предложить
-        // экспорт, надо знать все поля и вычесть из них уже описанные
-        // миграциями. Точечная выборка по конкретному полю не подходит.
         $rsFields = CUserTypeEntity::GetList([], ['LANG' => LANGUAGE_ID]);
         while ($field = $rsFields->Fetch()) {
             $key = $field['ENTITY_ID'] . '::' . $field['FIELD_NAME'];
@@ -242,14 +222,7 @@ class OptionExportButtonService
     }
 
     /**
-     * Наименования сущностей пользовательских полей: [ENTITY_ID => caption].
-     *
-     * Сами записи UF хранят только идентификатор (CRM_LEAD, CRM_4,
-     * IBLOCK_3_SECTION, HLBLOCK_1, …), поэтому человекочитаемое название
-     * достаём у ядра. Сущности, названия которых ядро не отдаёт (пользователи),
-     * остаются без названия — вызывающий код показывает идентификатор.
-     *
-     * @return array<string, string>
+     * @return array<string, string> [ENTITY_ID => caption]
      */
     public function getEntityNames(): array
     {
@@ -271,11 +244,8 @@ class OptionExportButtonService
     }
 
     /**
-     * Человекочитаемое наименование сущности по её идентификатору.
-     * Пустая строка, если ядро названия не отдаёт (пользователи).
-     *
      * @param string $entityId
-     * @return string
+     * @return string пустая строка, если ядро названия не отдаёт
      */
     public function getEntityName(string $entityId): string
     {
@@ -285,7 +255,7 @@ class OptionExportButtonService
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, string> [CRM_LEAD => «Лид»]
      */
     private function getCrmEntityNames(): array
     {
@@ -306,19 +276,7 @@ class OptionExportButtonService
     }
 
     /**
-     * Наименования инфоблоков: [IBLOCK_3_SECTION => «Подразделения»].
-     *
-     * Пользовательские поля информационных блоков живут под идентификаторами
-     * вида IBLOCK_<id>_SECTION / IBLOCK_<id>_ELEMENT, где <id> — ID инфоблока.
-     * Для таких сущностей показываем имя инфоблока: сам код уже говорит
-     * подготовленному человеку, что это разделы (или элементы) данного инфоблока.
-     *
-     * Идентификаторы инфоблоков берём одним запросом (DISTINCT по ENTITY_ID),
-     * названия — вторым, сразу для всех найденных id. Обходить инфоблоки
-     * по одному с CIBlock::GetArrayByID() в цикле не нужно: это N обращений
-     * к БД вместо одного.
-     *
-     * @return array<string, string>
+     * @return array<string, string> [IBLOCK_3_SECTION => «Подразделения»]
      */
     private function getIblockEntityNames(): array
     {
@@ -355,9 +313,6 @@ class OptionExportButtonService
     }
 
     /**
-     * Идентификаторы инфоблоков, у которых есть пользовательские поля.
-     * Один запрос с DISTINCT вместо чтения полного списка полей.
-     *
      * @return array<int, int>
      */
     private function getUserFieldIblockIds(): array
@@ -384,14 +339,7 @@ class OptionExportButtonService
     }
 
     /**
-     * Наименования HL-блоков: [HLBLOCK_1 => «Типы групп товаров»].
-     *
-     * Пользовательские поля HL-блоков живут под идентификатором вида HLBLOCK_<id>.
-     * Имя блока хранится отдельно от таблицы — в языковой таблице, поэтому берём
-     * название по текущему языку (ru), с откатом на техническое NAME.
-     * Код HLBLOCK_<id> человеку ничего не говорит, поэтому показываем имя блока.
-     *
-     * @return array<string, string>
+     * @return array<string, string> [HLBLOCK_1 => «Типы групп товаров»]
      */
     private function getHighloadBlockEntityNames(): array
     {
@@ -429,11 +377,7 @@ class OptionExportButtonService
     }
 
     /**
-     * Сервис полей текущей сборки. Возвращаем object без жёсткого typehint:
-     * у сервиса-реализации интерфейс только документирующий (так же, как в
-     * UserFieldsRegistry), а при редиректе код сервиса подставляет локатор.
-     *
-     * @return object
+     * @return IUserFieldService
      * @throws ModuleException
      */
     private function getUserFieldService(): object
@@ -442,11 +386,7 @@ class OptionExportButtonService
     }
 
     /**
-     * Префикс действий контроллера: <vendor>:<module>.api.UserFieldExport.
-     * Строится из модуля-источника, поэтому при перенаправлении кнопка
-     * в модуле-источнике обращается к своему собственному контроллеру.
-     *
-     * @return string
+     * @return string <vendor>:<module>.api.UserFieldExport
      */
     private function getActionPrefix(): string
     {

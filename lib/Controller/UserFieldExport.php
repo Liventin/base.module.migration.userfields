@@ -13,10 +13,6 @@ use Bitrix\Main\Engine\Controller;
 class UserFieldExport extends Controller
 {
     /**
-     * Доступ к действиям и логика списка — в сервисе кнопки: при
-     * перенаправлении (service-redirect) реализация подставляется из
-     * модуля-приёмника, поэтому контроллер остаётся тонким.
-     *
      * @return array
      * @throws ModuleException
      */
@@ -37,8 +33,6 @@ class UserFieldExport extends Controller
         /** @var ClassList $classList */
         $classList = Container::get(ClassList::SERVICE_CODE);
 
-        // Классы миграций ищем в lib модуля-источника: при перенаправлении
-        // классы лежат именно там, а сервис приёмника их не видит.
         $fields = $classList
             ->setSubClassesFilter([UserFieldEntity::class])
             ->getFromLib('Migration');
@@ -70,7 +64,7 @@ class UserFieldExport extends Controller
      * @return IOptionExportButtonService
      * @throws ModuleException
      */
-    private function getButtonService(): IOptionExportButtonService
+    private function getButtonService(): object
     {
         return Container::get(IOptionExportButtonService::SERVICE_CODE);
     }

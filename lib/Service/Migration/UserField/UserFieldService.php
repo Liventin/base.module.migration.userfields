@@ -23,12 +23,6 @@ interface UserFieldService
     public function getExportableProviders(): array;
 
     /**
-     * Экспортирует пользовательское поле в класс миграции.
-     *
-     * Наименование сущности передаёт вызывающий код: логика его определения
-     * живёт в сервисе кнопки (OptionExportButtonService), а не здесь — иначе
-     * определение имён пришлось бы дублировать в каждом модуле-источнике.
-     *
      * @param string $entityId
      * @param string $fieldName
      * @param string $providerType

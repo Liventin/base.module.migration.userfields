@@ -52,10 +52,6 @@ class ExportUserFields implements Option
             return [];
         }
 
-        // Всё, что касается кнопки — тексты и JS, который её рисует, — живёт
-        // в сервисе. Здесь остаётся только вызов: при перенаправлении
-        // реализация подставляется из модуля-приёмника, поэтому одна и та же
-        // «портянка» JS не дублируется в каждом модуле на коробке.
         /** @var IOptionExportButtonService $buttonService */
         $buttonService = Container::get(IOptionExportButtonService::SERVICE_CODE);
         $button = $buttonService->getButton();
