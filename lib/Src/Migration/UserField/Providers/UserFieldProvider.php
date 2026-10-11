@@ -6,19 +6,10 @@ use Base\Module\Src\Migration\UserField\Providers\UserFieldExportable;
 
 class UserFieldProvider implements UserFieldExportable
 {
-    /**
-     * Каталог миграций пользовательских полей внутри lib/ модуля.
-     * ClassList выводит namespace из пути файла, поэтому namespace
-     * генерируемых классов обязан повторять этот каталог.
-     */
     public const MIGRATION_DIR = 'UserFields';
 
     private const NAMESPACE_SUFFIX = '\\Migration\\UserFields';
 
-    /**
-     * Базовые поля Bitrix, которые переносятся в миграцию как есть.
-     * Должны совпадать с ключами, которые читает makeFile().
-     */
     private const COMMON_FIELD_KEYS = [
         'XML_ID', 'SORT', 'MULTIPLE', 'MANDATORY', 'SHOW_FILTER',
         'SHOW_IN_LIST', 'EDIT_IN_LIST', 'IS_SEARCHABLE', 'SETTINGS',
@@ -111,13 +102,6 @@ class UserFieldProvider implements UserFieldExportable
     }
 
     /**
-     * Приводит запись пользовательского поля Bitrix к виду, которым
-     * оперирует миграция (та же форма, что читает makeFile()).
-     *
-     * Знание о базовых полях Bitrix живёт здесь, рядом с makeFile(),
-     * а не в сервисе: сервис только достаёт запись из БД и отдаёт её
-     * провайдеру.
-     *
      * @param array $field запись из CUserTypeEntity::GetList()
      * @return array
      */
